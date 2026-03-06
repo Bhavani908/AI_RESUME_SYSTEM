@@ -45,11 +45,10 @@ def register():
 
 
 # ================= LOGIN =================
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
 
     if request.method == "POST":
-
         username = request.form["username"]
         password = request.form["password"]
 
@@ -57,12 +56,12 @@ def login():
 
         user = db.execute(
             "SELECT * FROM users WHERE username=? AND password=?",
-            (username,password)
+            (username, password)
         ).fetchone()
 
         if user:
             session["user_id"] = user["id"]
-            return redirect(url_for("dashboard"))
+            return redirect("/dashboard")
 
     return render_template("login.html")
 
