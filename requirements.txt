@@ -1,6 +1,6 @@
 Flask
-PyPDF2
-python-docx
-SpeechRecognition
 gunicorn
-pysqlite3
+SpeechRecognition
+pypdf
+python-docx
+scikit-learn
