@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Resume History</title>
+</head>
+
+<body>
+
+<h1>Previous Resume Analysis</h1>
+
+<table border="1">
+
+<tr>
+<th>Resume</th>
+<th>Role</th>
+<th>Match %</th>
+<th>Skill Gaps</th>
+</tr>
+
+{% for r in records %}
+
+<tr>
+<td>{{ r.filename }}</td>
+<td>{{ r.role }}</td>
+<td>{{ r.match_score }}</td>
+<td>{{ r.gaps }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+</html>

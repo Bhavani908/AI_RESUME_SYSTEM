@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Career Analysis Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="results-bg">
+
+<div class="main-wrapper">
+
+    <h1 class="page-title">Career Analysis Report</h1>
+
+    {% for item in role_actions %}
+    <div class="card">
+
+        <div class="card-header">
+            <h2>{{ item.role }}</h2>
+            <span class="badge">{{ item.match }}% Match</span>
+        </div>
+
+        {% if item.type == "interview" %}
+        <div class="highlight">
+            ⭐ This role is a strong match for you!
+            <br><br>
+            <a href="https://app.yoodli.ai/practice" target="_blank">
+                <button class="primary-btn">Start Mock Interview</button>
+            </a>
+        </div>
+        {% else %}
+        <h3 class="section-title">📉 Skill Gap Learning Plan</h3>
+
+        <div class="skills-grid">
+            {% for gap in item.gaps %}
+            <div class="skill-card">
+                <h4>{{ gap }}</h4>
+                <p>Recommended Free Course</p>
+                <a href="{{ item.resources[gap] }}" target="_blank" class="learn-btn">Start Learning →</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h3 class="section-title">🔎 Apply for Jobs</h3>
+        <div class="jobs-row">
+            {% for site, link in item.job_links.items() %}
+            <a href="{{ link }}" target="_blank" class="job-btn">{{ site }}</a>
+            {% endfor %}
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+</body>
+</html>
+

@@ -1,0 +1,6 @@
+Flask
+PyPDF2
+python-docx
+SpeechRecognition
+gunicorn
+pysqlite3
