@@ -1,5 +1,5 @@
-from database import get_db
 from flask import Flask, render_template, request, redirect, url_for, session
+from database import get_db, init_db
 from resume_parser import extract_text_from_pdf, extract_text_from_docx
 from job_recommender import recommend_jobs
 from skill_gap_ai import detect_skill_gap, recommend_resources
@@ -14,18 +14,81 @@ app.secret_key = "career_ai_secret"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+init_db()
 
-# ================= HOME / RESUME UPLOAD =================
-@app.route("/", methods=["GET", "POST"])
-def index():
+# ================= HOME =================
+@app.route("/")
+def home():
+    return redirect(url_for("login"))
+
+# ================= REGISTER =================
+@app.route("/register", methods=["GET","POST"])
+def register():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        db = get_db()
+
+        db.execute(
+            "INSERT INTO users(username,password) VALUES (?,?)",
+            (username,password)
+        )
+
+        db.commit()
+
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+
+# ================= LOGIN =================
+@app.route("/login", methods=["GET","POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        db = get_db()
+
+        user = db.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (username,password)
+        ).fetchone()
+
+        if user:
+            session["user_id"] = user["id"]
+            return redirect(url_for("dashboard"))
+
+    return render_template("login.html")
+
+
+# ================= LOGOUT =================
+@app.route("/logout")
+def logout():
+
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ================= DASHBOARD =================
+@app.route("/dashboard", methods=["GET","POST"])
+def dashboard():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
 
     if request.method == "POST":
 
         file = request.files["resume"]
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+
+        filepath = os.path.join(UPLOAD_FOLDER,file.filename)
         file.save(filepath)
 
-        # Extract resume text
         if file.filename.endswith(".pdf"):
             resume_text = extract_text_from_pdf(filepath)
         else:
@@ -41,14 +104,13 @@ def index():
 
             job_links = generate_job_links(role)
 
-            # ================= STRONG MATCH =================
             if match >= 80:
 
                 db.execute("""
                 INSERT INTO resume_history(user_id,filename,role,match_score,gaps,resources)
                 VALUES (?,?,?,?,?,?)
-                """, (
-                    session.get("user_id", 1),   # default user if login not implemented yet
+                """,(
+                    session["user_id"],
                     file.filename,
                     role,
                     match,
@@ -65,17 +127,16 @@ def index():
                     "job_links": job_links
                 })
 
-            # ================= SKILL GAP =================
             else:
 
-                gaps = detect_skill_gap(role, resume_text)
+                gaps = detect_skill_gap(role,resume_text)
                 resources = recommend_resources(gaps)
 
                 db.execute("""
                 INSERT INTO resume_history(user_id,filename,role,match_score,gaps,resources)
                 VALUES (?,?,?,?,?,?)
-                """, (
-                    session.get("user_id", 1),
+                """,(
+                    session["user_id"],
                     file.filename,
                     role,
                     match,
@@ -96,10 +157,10 @@ def index():
 
         return render_template("result.html", role_actions=role_actions)
 
-    return redirect(url_for("login"))
+    return render_template("index.html")
 
 
-# ================= START INTERVIEW =================
+# ================= INTERVIEW =================
 @app.route("/start_interview/<role>")
 def start_interview(role):
 
@@ -111,16 +172,16 @@ def start_interview(role):
     return redirect(url_for("interview_question"))
 
 
-# ================= INTERVIEW QUESTION =================
 @app.route("/interview_question")
 def interview_question():
 
     questions = session.get("questions")
-    current_q = session.get("current_q", 0)
+    current_q = session.get("current_q",0)
 
     if current_q >= len(questions):
+
         final_score = session["score"]
-        feedback = session.get("feedback", "Good attempt!")
+        feedback = session.get("feedback","Good attempt!")
 
         return render_template(
             "interview_result.html",
@@ -134,14 +195,14 @@ def interview_question():
     )
 
 
-# ================= VOICE SUBMISSION =================
+# ================= VOICE ANSWER =================
 @app.route("/submit_voice", methods=["POST"])
 def submit_voice():
 
     try:
 
         file = request.files["audio_data"]
-        wav_path = os.path.join(UPLOAD_FOLDER, "answer.wav")
+        wav_path = os.path.join(UPLOAD_FOLDER,"answer.wav")
         file.save(wav_path)
 
         recognizer = sr.Recognizer()
@@ -151,80 +212,49 @@ def submit_voice():
 
         try:
             text = recognizer.recognize_google(audio).lower()
-            print("Recognized:", text)
-        except Exception as e:
-            print("Speech error:", e)
+        except:
             text = ""
 
         question = session["questions"][session["current_q"]]
 
-        score, feedback = evaluate_answer(question, text)
+        score, feedback = evaluate_answer(question,text)
 
         session["score"] += score
         session["feedback"] = feedback
         session["current_q"] += 1
 
         return {
-            "score": score,
-            "feedback": feedback,
-            "next": url_for("interview_question")
+            "score":score,
+            "feedback":feedback,
+            "next":url_for("interview_question")
         }
 
-    except Exception as e:
-
-        print("Voice processing error:", e)
+    except:
 
         return {
-            "score": 0,
-            "feedback": "Audio processing failed",
-            "next": url_for("interview_question")
+            "score":0,
+            "feedback":"Audio processing failed",
+            "next":url_for("interview_question")
         }
 
-@app.route("/login", methods=["GET","POST"])
-def login():
 
-    if request.method == "POST":
-
-        username = request.form["username"]
-        password = request.form["password"]
-
-        db = get_db()
-
-        user = db.execute(
-            "SELECT * FROM users WHERE username=? AND password=?",
-            (username,password)
-        ).fetchone()
-
-        if user:
-            session["user_id"] = user["id"]
-            return redirect(url_for("dashboard"))
-
-        else:
-            return "Invalid Login"
-
-    return render_template("login.html")
-@app.route("/dashboard")
-def dashboard():
+# ================= HISTORY =================
+@app.route("/history")
+def history():
 
     if "user_id" not in session:
         return redirect(url_for("login"))
-
-    return render_template("index.html")
-
-# ================= HISTORY PAGE =================
-@app.route("/history")
-def history():
 
     db = get_db()
 
     records = db.execute(
         "SELECT * FROM resume_history WHERE user_id=?",
-        (session.get("user_id", 1),)
+        (session["user_id"],)
     ).fetchall()
 
     return render_template("history.html", records=records)
 
 
-# ================= RUN APP =================
+# ================= RUN =================
 if __name__ == "__main__":
     app.run(debug=True)
