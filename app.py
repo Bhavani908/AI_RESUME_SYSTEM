@@ -96,7 +96,7 @@ def index():
 
         return render_template("result.html", role_actions=role_actions)
 
-    return render_template("index.html")
+    return redirect(url_for("login"))
 
 
 # ================= START INTERVIEW =================
@@ -180,6 +180,36 @@ def submit_voice():
             "next": url_for("interview_question")
         }
 
+@app.route("/login", methods=["GET","POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        db = get_db()
+
+        user = db.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (username,password)
+        ).fetchone()
+
+        if user:
+            session["user_id"] = user["id"]
+            return redirect(url_for("dashboard"))
+
+        else:
+            return "Invalid Login"
+
+    return render_template("login.html")
+@app.route("/dashboard")
+def dashboard():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("index.html")
 
 # ================= HISTORY PAGE =================
 @app.route("/history")
