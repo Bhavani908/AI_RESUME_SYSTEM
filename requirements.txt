@@ -1,6 +1,6 @@
 Flask
 gunicorn
 SpeechRecognition
-pypdf
+PyPDF2
 python-docx
 scikit-learn
