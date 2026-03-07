@@ -1,18 +1,27 @@
-@app.route("/login", methods=["GET","POST"])
-def login():
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+<body>
 
-        db = get_db()
-        user = db.execute(
-            "SELECT * FROM users WHERE username=? AND password=?",
-            (username,password)
-        ).fetchone()
+<h2>Login</h2>
 
-        if user:
-            session["user_id"] = user["id"]
-            return redirect("/dashboard")
+<form method="POST">
 
-    return render_template("login.html")
+<label>Username</label>
+<input type="text" name="username" required>
+
+<label>Password</label>
+<input type="password" name="password" required>
+
+<button type="submit">Login</button>
+
+</form>
+
+<a href="/register">Register</a>
+
+</body>
+</html>
