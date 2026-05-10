@@ -1,4 +1,4 @@
-# AI_RESUME_SYSTEM
+
 # AI Powered Resume Analysis and Career Recommendation System
 
 ## 📌 Project Overview
